@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{% block title %}StudySpot{% endblock %}</title><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"></head>
+<body><header class="topbar"><a class="brand" href="{{ url_for('explore') }}">StudySpot<span>Campus study spaces</span></a><a class="navlink" href="{{ url_for('explore') }}">Explore spaces</a></header>
+<main><div class="sample-note"><strong>Sample campus dataset</strong><span>These locations and amenities are fictional examples for this prototype.</span></div>
+{% for message in get_flashed_messages() %}<div class="success" role="status">{{ message }}</div>{% endfor %}
+{% block content %}{% endblock %}</main><footer>StudySpot · Individual project prototype · Reports are user observations, not live occupancy measurements.</footer></body></html>
