@@ -1,4 +1,7 @@
-# StudySpot Sprint 2
+# StudySpot
+
+[![StudySpot CI](https://github.com/hailong0410/StudySpot/actions/workflows/ci.yml/badge.svg)](https://github.com/hailong0410/StudySpot/actions/workflows/ci.yml)
+
 
 A small, working Flask + SQLite prototype for Hai Long Ha's individual project.
 All eight locations and amenities are **fictional sample data**. No live Vanderbilt
@@ -79,3 +82,15 @@ Sprint 2 slides and the architecture report are submitted as PDFs on Brightspace
 The individual teamwork assessment is submitted separately. The architecture report
 contains the AI usage log, including assistance with implementation, checks, and
 document drafts.
+
+## Sprint 3 checks and delivery
+
+Install pinned CI dependencies with `python -m pip install -r requirements-ci-lock.txt`. Run `python -m ruff check .`, `python -m mypy app.py domain.py --ignore-missing-imports --check-untyped-defs`, then `python -m pytest -q --cov=app --cov=domain --cov-branch --cov-report=json:coverage.json --cov-fail-under=70`.
+
+Unit and integration cases have separate markers. `domain.py` contains pure search, validation and report-age rules; Flask routes retain request/session/database operations.
+
+GitHub Actions checks PRs targeting main and pushes to main. After a successful push to main, a separate delivery job builds and publishes `StudySpot-<commit SHA>.zip` as a versioned runnable Actions artifact. The ZIP contains the application, templates, static assets, schema and pinned runtime dependencies, with no databases or session keys.
+
+To run a downloaded artifact, extract it, install `requirements-runtime-lock.txt`, and run `python app.py`. It needs Python 3.12 for the pinned Sprint 3 build. There is no automatic public deployment.
+
+The workflow and Sprint 3 code are currently prepared locally. A green GitHub run, enforced main protection, an independent approving review and the sprint3 tag are still needed before the sprint can be marked complete.

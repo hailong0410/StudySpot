@@ -102,3 +102,12 @@ Branch coverage = covered_branches / num_branches in coverage.json. Do not subst
 
 ## Git delivery
 Changes are prepared on branch ica10-test-plan. Commit the plan, tests, marker configuration and pytest-cov dependency together. Push the branch and open a PR against main. The PR should describe the new boundaries and include the 12-to-37 test and 77.78%-to-94.44% branch results. Do not call the PR complete until it exists on GitHub.
+
+## Project Sprint 3 preparation
+The pure rules are now in domain.py and have dedicated unit tests. This refactor keeps the existing routes and user-visible pricing-free report behavior. Fixtures are shared through conftest.py.
+
+The current local suite has 85 cases: 45 unit and 40 integration. It covers all current pure search/validation/age rules and includes a valid POST checked directly against a real temporary database. The old ICA10 figures above describe that earlier snapshot, not this refactored build.
+
+The revised workflow installs requirements-ci-lock.txt, runs lint and type checks, then unit and integration steps, then full coverage. On a successful push to main it builds and publishes a SHA-versioned runnable Actions artifact. The CD choice is an artifact, not a live deployment.
+
+Publishing, main protection, an independent approving review, a red-to-green PR run and the sprint3 tag are still pending. Do not treat a local pass as a green main run. Backlog progress by story points and actual time require the original records; feature count alone is not the percentage.

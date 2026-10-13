@@ -5,7 +5,7 @@ import sqlite3
 
 import pytest
 import app as studyspot
-from test_app import app, client, token
+from test_app import token
 
 pytestmark = pytest.mark.integration
 
@@ -128,3 +128,27 @@ def test_oversized_report_returns_413_without_writing(client, app):
     assert response.status_code == 413
     with sqlite3.connect(app.config['DATABASE']) as db:
         assert db.execute('SELECT COUNT(*) FROM status_reports').fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('query,expected_count', [
+    ({'study': 'individual'}, 5),
+    ({'study': 'group'}, 5),
+    ({'outlets': 'yes'}, 6),
+])
+def test_each_study_and_outlet_filter_crosses_real_database(client, query, expected_count):
+    response = client.get('/', query_string=query)
+    assert response.status_code == 200
+    assert response.data.count(b'class="space"') == expected_count
+
+
+def test_valid_report_route_writes_exact_database_row(client, app, monkeypatch):
+    now = datetime(2026, 10, 13, 18, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(studyspot, 'utc_now', lambda: now)
+    csrf = token(client)
+    response = client.post('/spaces/1/reports', data={
+        'csrf_token': csrf, 'crowd': 'low', 'noise': 'quiet',
+    })
+    assert response.status_code == 303
+    with sqlite3.connect(app.config['DATABASE']) as db:
+        rows = db.execute('SELECT space_id,crowd,noise,created_at FROM status_reports').fetchall()
+    assert rows == [(1, 'low', 'quiet', '2026-10-13T18:00:00+00:00')]

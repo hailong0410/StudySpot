@@ -7,16 +7,6 @@ from app import create_app, utc_now
 pytestmark = pytest.mark.integration
 
 
-@pytest.fixture
-def app(tmp_path):
-    return create_app({"TESTING": True, "SECRET_KEY": "testing-only-key", "DATABASE": str(tmp_path / "test.sqlite3")})
-
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
-
-
 def token(client):
     client.get("/spaces/1")
     with client.session_transaction() as s:
