@@ -4,6 +4,8 @@ import sqlite3
 import pytest
 from app import create_app, utc_now
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.fixture
 def app(tmp_path):
