@@ -7,6 +7,8 @@ import sqlite3
 
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
 
+from domain import CROWD, NOISE, build_space_query, parse_filters, report_view, validate_report_fields
+
 BASE = Path(__file__).resolve().parent
 SAMPLE_SPACES = [
     ("Library Quiet Zone", "Sample campus library, level 2", "A sample space for focused individual study.", "individual", 1, "quiet"),
@@ -18,8 +20,6 @@ SAMPLE_SPACES = [
     ("Collaboration Room", "Sample learning center, level 1", "A sample indoor area for project discussions.", "group", 1, "moderate"),
     ("Campus Cafe Tables", "Sample campus cafe", "A sample informal space that may be noisy.", "both", 1, "lively"),
 ]
-CROWD = {"low": "Not busy", "medium": "Somewhat busy", "high": "Very busy"}
-NOISE = {"quiet": "Quiet", "moderate": "Some conversation", "loud": "Loud"}
 
 
 def utc_now():
@@ -60,14 +60,6 @@ def create_app(test_config=None):
             db.executemany("INSERT INTO study_spaces(name, location, description, study_type, outlets, atmosphere) VALUES (?,?,?,?,?,?)", SAMPLE_SPACES)
             db.commit()
 
-    def report_view(row):
-        if not row:
-            return None
-        posted = datetime.fromisoformat(row["created_at"])
-        minutes = max(0, int((utc_now() - posted).total_seconds() // 60))
-        age = "Just now" if minutes == 0 else (f"{minutes} min ago" if minutes < 60 else (f"{minutes // 60} hours ago" if minutes < 1440 else f"{minutes // 1440} days ago"))
-        return dict(row) | {"age": age, "stale": minutes >= 60, "crowd_label": CROWD[row["crowd"]], "noise_label": NOISE[row["noise"]], "display_time": posted.strftime("%Y-%m-%d %H:%M UTC")}
-
     @app.context_processor
     def shared():
         if "csrf_token" not in session:
@@ -76,27 +68,16 @@ def create_app(test_config=None):
 
     @app.get("/")
     def explore():
-        q = request.args.get("q", "").strip()[:120]
-        study = request.args.get("study", "")
-        outlets = request.args.get("outlets", "")
-        atmosphere = request.args.get("atmosphere", "")
-        if study not in ("", "individual", "group") or outlets not in ("", "yes") or atmosphere not in ("", "quiet"):
-            abort(400, description="Choose one of the available filters.")
-        conditions, args = [], []
-        if q:
-            escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-            conditions.append("name LIKE ? ESCAPE '\\'")
-            args.append("%" + escaped + "%")
-        if study:
-            conditions.append("study_type IN (?, 'both')")
-            args.append(study)
-        if outlets:
-            conditions.append("outlets = 1")
-        if atmosphere:
-            conditions.append("atmosphere = 'quiet'")
-        sql = "SELECT * FROM study_spaces" + (" WHERE " + " AND ".join(conditions) if conditions else "") + " ORDER BY name"
+        try:
+            filters = parse_filters(
+                request.args.get("q", ""), request.args.get("study", ""),
+                request.args.get("outlets", ""), request.args.get("atmosphere", ""),
+            )
+        except ValueError as error:
+            abort(400, description=str(error))
+        sql, args = build_space_query(filters)
         rows = get_db().execute(sql, args).fetchall()
-        return render_template("explore.html", spaces=rows, filters=dict(q=q, study=study, outlets=outlets, atmosphere=atmosphere))
+        return render_template("explore.html", spaces=rows, filters=filters)
 
     @app.get("/spaces/<int:space_id>")
     def detail(space_id):
@@ -105,7 +86,7 @@ def create_app(test_config=None):
         if space is None:
             abort(404)
         rows = db.execute("SELECT * FROM status_reports WHERE space_id=? ORDER BY created_at DESC, id DESC LIMIT 5", (space_id,)).fetchall()
-        reports = [report_view(r) for r in rows]
+        reports = [report_view(r, utc_now()) for r in rows]
         return render_template("detail.html", space=space, reports=reports, latest=reports[0] if reports else None)
 
     @app.post("/spaces/<int:space_id>/reports")
@@ -115,9 +96,10 @@ def create_app(test_config=None):
             abort(404)
         if not secrets.compare_digest(request.form.get("csrf_token", ""), session.get("csrf_token", "INVALID")):
             abort(400, description="The form expired. Return to the place page and try again.")
-        crowd, noise = request.form.get("crowd"), request.form.get("noise")
-        if crowd not in CROWD or noise not in NOISE:
-            abort(400, description="Select a crowd level and a noise level.")
+        try:
+            crowd, noise = validate_report_fields(request.form.get("crowd"), request.form.get("noise"))
+        except ValueError as error:
+            abort(400, description=str(error))
         with db:
             db.execute("INSERT INTO status_reports(space_id,crowd,noise,created_at) VALUES (?,?,?,?)", (space_id, crowd, noise, utc_now().isoformat()))
         flash("Your update was saved.")

@@ -1,0 +1,73 @@
+name: StudySpot CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci-lock.txt
+      - name: Install pinned dependencies
+        run: python -m pip install -r requirements-ci-lock.txt
+      - name: Lint
+        run: python -m ruff check .
+      - name: Type check
+        run: python -m mypy app.py domain.py scripts/build_artifact.py --ignore-missing-imports --check-untyped-defs
+      - name: Unit tests
+        run: python -m pytest -q -m "not integration"
+      - name: Integration tests
+        run: python -m pytest -q -m integration
+      - name: Coverage report
+        run: python -m pytest -q --cov=app --cov=domain --cov-branch --cov-report=term-missing --cov-report=json:coverage.json --cov-fail-under=70
+      - name: Branch coverage gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("coverage.json").read_text())
+          gates = [("Overall", data["totals"], 70)]
+          gates.extend((name, data["files"][name]["summary"], 85) for name in ("app.py", "domain.py"))
+          for label, summary, target in gates:
+              total = summary["num_branches"]
+              actual = 100 * summary["covered_branches"] / total if total else 100
+              print(f"{label} branch coverage: {actual:.2f}% (target {target}%)")
+              if actual < target:
+                  raise SystemExit(f"{label} branch coverage is below target")
+          PY
+
+  publish-artifact:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build versioned runnable application
+        run: python scripts/build_artifact.py --version "${{ github.sha }}"
+      - name: Publish versioned application artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: StudySpot-${{ github.sha }}
+          path: dist/StudySpot-${{ github.sha }}.zip
+          if-no-files-found: error
+          retention-days: 30
