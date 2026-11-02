@@ -45,8 +45,8 @@ python3 -m venv .venv
 - See a warning for reports at least 60 minutes old.
 - Basic server validation, parameterized SQL, escaped HTML, and CSRF form tokens.
 
-Accounts, favorites, administration, verified real locations, map links and public
-hosting are **not implemented**. Anonymous reporting is an explicit temporary scope
+Accounts are available on this branch. Favorites, administration, verified real locations,
+map links and public hosting are **not implemented**. Anonymous reporting is an explicit temporary scope
 choice, with spam prevention and identity planned for a later sprint.
 
 ## Data and reset
@@ -94,3 +94,19 @@ GitHub Actions checks PRs targeting main and pushes to main. After a successful 
 To run a downloaded artifact, extract it, install `requirements-runtime-lock.txt`, and run `python app.py`. It needs Python 3.12 for the pinned Sprint 3 build. There is no automatic public deployment.
 
 The workflow and Sprint 3 code are currently prepared locally. A green GitHub run, enforced main protection, an independent approving review and the sprint3 tag are still needed before the sprint can be marked complete.
+
+# Sprint 4 account review
+
+Branch: `sprint4-account-review`. Stories: US14 registration and US15 login/logout.
+Register at `/register`, sign in at `/login`, and inspect `/account`; logout is a CSRF-protected POST.
+SQLite stores password hashes and revocable session-token hashes. Sessions expire after 30 minutes.
+Legacy public browsing and anonymous reports are preserved; authenticated reporting is separate US19 work.
+For HTTPS hosting configure `SESSION_COOKIE_SECURE=True`; this branch is a local prototype.
+Known follow-up: registration/login attempt throttling is not implemented. Do not deploy publicly before hardening it.
+Favorites, moderation, authenticated report cooldown and the Sprint 4 security stage remain separate work.
+
+Run: `python -m pip install -r requirements-ci-lock.txt`, then `python app.py`.
+Review tests: `python -m pytest -q test_accounts.py`.
+Full suite: `python -m pytest -q --cov=app --cov=domain --cov=accounts --cov-branch --cov-report=term-missing --cov-fail-under=70`.
+The updated account module is included in the runnable build and CI type/coverage checks.
+

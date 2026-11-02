@@ -29,13 +29,13 @@ jobs:
       - name: Lint
         run: python -m ruff check .
       - name: Type check
-        run: python -m mypy app.py domain.py scripts/build_artifact.py --ignore-missing-imports --check-untyped-defs
+        run: python -m mypy app.py domain.py accounts.py scripts/build_artifact.py --ignore-missing-imports --check-untyped-defs
       - name: Unit tests
         run: python -m pytest -q -m "not integration"
       - name: Integration tests
         run: python -m pytest -q -m integration
       - name: Coverage report
-        run: python -m pytest -q --cov=app --cov=domain --cov-branch --cov-report=term-missing --cov-report=json:coverage.json --cov-fail-under=70
+        run: python -m pytest -q --cov=app --cov=domain --cov=accounts --cov-branch --cov-report=term-missing --cov-report=json:coverage.json --cov-fail-under=70
       - name: Branch coverage gate
         run: |
           python - <<'PY'
@@ -43,7 +43,7 @@ jobs:
           from pathlib import Path
           data = json.loads(Path("coverage.json").read_text())
           gates = [("Overall", data["totals"], 70)]
-          gates.extend((name, data["files"][name]["summary"], 85) for name in ("app.py", "domain.py"))
+          gates.extend((name, data["files"][name]["summary"], 85) for name in ("app.py", "domain.py", "accounts.py"))
           for label, summary, target in gates:
               total = summary["num_branches"]
               actual = 100 * summary["covered_branches"] / total if total else 100
@@ -71,3 +71,4 @@ jobs:
           path: dist/StudySpot-${{ github.sha }}.zip
           if-no-files-found: error
           retention-days: 30
+
