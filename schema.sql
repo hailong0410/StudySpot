@@ -15,3 +15,14 @@ CREATE TABLE IF NOT EXISTS status_reports (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_reports_space_time ON status_reports(space_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    token_hash TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at REAL NOT NULL
+);
+

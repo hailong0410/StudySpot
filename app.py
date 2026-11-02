@@ -8,6 +8,7 @@ import sqlite3
 from flask import Flask, abort, flash, g, redirect, render_template, request, session, url_for
 
 from domain import CROWD, NOISE, build_space_query, parse_filters, report_view, validate_report_fields
+from accounts import register_accounts
 
 BASE = Path(__file__).resolve().parent
 SAMPLE_SPACES = [
@@ -59,6 +60,8 @@ def create_app(test_config=None):
         if db.execute("SELECT COUNT(*) FROM study_spaces").fetchone()[0] == 0:
             db.executemany("INSERT INTO study_spaces(name, location, description, study_type, outlets, atmosphere) VALUES (?,?,?,?,?,?)", SAMPLE_SPACES)
             db.commit()
+
+    register_accounts(app, get_db, utc_now)
 
     @app.context_processor
     def shared():
@@ -121,3 +124,4 @@ def create_app(test_config=None):
 
 if __name__ == "__main__":
     create_app().run(host="127.0.0.1", port=int(os.environ.get("STUDYSPOT_PORT", "5000")), debug=False)
+
