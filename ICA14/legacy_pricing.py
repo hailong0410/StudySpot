@@ -8,23 +8,7 @@ Your job: refactor it without changing behavior, and measure the result with rad
 def calc(t, q, u, d, c=None, w=False):
     # t = event type, q = quantity, u = user dict, d = day of week (0=Mon..6=Sun),
     # c = coupon code, w = waitlist
-    base_price = 0
-    if t == "concert":
-        if d == 5 or d == 6:
-            base_price = 25.0
-        else:
-            base_price = 20.0
-    elif t == "lecture":
-        base_price = 5.0
-    elif t == "sports":
-        if d == 5 or d == 6:
-            base_price = 15.0
-        else:
-            base_price = 12.0
-    elif t == "workshop":
-        base_price = 30.0
-    else:
-        raise ValueError("bad type")
+    base_price = _base_price(t, d)
     if q <= 0:
         raise ValueError("bad qty")
     if q > 10:
@@ -70,3 +54,24 @@ def calc(t, q, u, d, c=None, w=False):
         else:
             fee = 5.0
     return round(total + fee, 2)
+
+
+def _base_price(event_type, day):
+    base_price = 0
+    if event_type == "concert":
+        if day == 5 or day == 6:
+            base_price = 25.0
+        else:
+            base_price = 20.0
+    elif event_type == "lecture":
+        base_price = 5.0
+    elif event_type == "sports":
+        if day == 5 or day == 6:
+            base_price = 15.0
+        else:
+            base_price = 12.0
+    elif event_type == "workshop":
+        base_price = 30.0
+    else:
+        raise ValueError("bad type")
+    return base_price
