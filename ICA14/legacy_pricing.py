@@ -11,19 +11,7 @@ def calc(t, q, u, d, c=None, w=False):
     base_price = _base_price(t, d)
     _validate_quantity(q)
     total = base_price * q
-    if u is not None:
-        if u.get("role") == "student":
-            if u.get("verified"):
-                total = total * 0.8
-            else:
-                total = total * 0.9
-        elif u.get("role") == "staff":
-            total = total * 0.85
-        elif u.get("role") == "alumni":
-            if u.get("years", 0) >= 10:
-                total = total * 0.85
-            else:
-                total = total * 0.95
+    total = _apply_role_discount(total, u)
     if q >= 5:
         if t != "workshop":
             total = total - 5.0
@@ -79,3 +67,20 @@ def _validate_quantity(quantity):
         raise ValueError("bad qty")
     if quantity > 10:
         raise ValueError("too many")
+
+
+def _apply_role_discount(total, user):
+    if user is not None:
+        if user.get("role") == "student":
+            if user.get("verified"):
+                total = total * 0.8
+            else:
+                total = total * 0.9
+        elif user.get("role") == "staff":
+            total = total * 0.85
+        elif user.get("role") == "alumni":
+            if user.get("years", 0) >= 10:
+                total = total * 0.85
+            else:
+                total = total * 0.95
+    return total
