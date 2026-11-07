@@ -8,28 +8,28 @@ Your job: refactor it without changing behavior, and measure the result with rad
 def calc(t, q, u, d, c=None, w=False):
     # t = event type, q = quantity, u = user dict, d = day of week (0=Mon..6=Sun),
     # c = coupon code, w = waitlist
-    p = 0
+    base_price = 0
     if t == "concert":
         if d == 5 or d == 6:
-            p = 25.0
+            base_price = 25.0
         else:
-            p = 20.0
+            base_price = 20.0
     elif t == "lecture":
-        p = 5.0
+        base_price = 5.0
     elif t == "sports":
         if d == 5 or d == 6:
-            p = 15.0
+            base_price = 15.0
         else:
-            p = 12.0
+            base_price = 12.0
     elif t == "workshop":
-        p = 30.0
+        base_price = 30.0
     else:
         raise ValueError("bad type")
     if q <= 0:
         raise ValueError("bad qty")
     if q > 10:
         raise ValueError("too many")
-    total = p * q
+    total = base_price * q
     if u is not None:
         if u.get("role") == "student":
             if u.get("verified"):
