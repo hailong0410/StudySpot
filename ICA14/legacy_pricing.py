@@ -12,9 +12,7 @@ def calc(t, q, u, d, c=None, w=False):
     _validate_quantity(q)
     total = base_price * q
     total = _apply_role_discount(total, u)
-    if q >= 5:
-        if t != "workshop":
-            total = total - 5.0
+    total = _apply_bulk_discount(total, t, q)
     if c is not None:
         if c == "WELCOME10":
             if u is not None and u.get("first_purchase"):
@@ -83,4 +81,11 @@ def _apply_role_discount(total, user):
                 total = total * 0.85
             else:
                 total = total * 0.95
+    return total
+
+
+def _apply_bulk_discount(total, event_type, quantity):
+    if quantity >= 5:
+        if event_type != "workshop":
+            total = total - 5.0
     return total
