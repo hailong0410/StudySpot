@@ -13,17 +13,7 @@ def calc(t, q, u, d, c=None, w=False):
     total = base_price * q
     total = _apply_role_discount(total, u)
     total = _apply_bulk_discount(total, t, q)
-    if c is not None:
-        if c == "WELCOME10":
-            if u is not None and u.get("first_purchase"):
-                total = total * 0.9
-        elif c == "HALFOFF":
-            if t == "lecture":
-                total = total * 0.5
-        elif c == "FREEDRINK":
-            pass
-        else:
-            raise ValueError("bad coupon")
+    total = _apply_coupon(total, t, u, c)
     if w:
         total = total + 2.0
     if total < 0:
@@ -88,4 +78,19 @@ def _apply_bulk_discount(total, event_type, quantity):
     if quantity >= 5:
         if event_type != "workshop":
             total = total - 5.0
+    return total
+
+
+def _apply_coupon(total, event_type, user, coupon):
+    if coupon is not None:
+        if coupon == "WELCOME10":
+            if user is not None and user.get("first_purchase"):
+                total = total * 0.9
+        elif coupon == "HALFOFF":
+            if event_type == "lecture":
+                total = total * 0.5
+        elif coupon == "FREEDRINK":
+            pass
+        else:
+            raise ValueError("bad coupon")
     return total
