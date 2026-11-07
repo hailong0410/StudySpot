@@ -1,0 +1,12 @@
+legacy_pricing.py
+    LOC: 101
+    LLOC: 81
+    SLOC: 80
+    Comments: 2
+    Single comments: 2
+    Multi: 4
+    Blank: 15
+    - Comment Stats
+        (C % L): 2%
+        (C % S): 2%
+        (C + M % L): 6%

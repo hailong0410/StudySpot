@@ -1,0 +1,31 @@
+c8d15ba baseline: preserve starter and record 24 passing tests
+........................                                                 [100%]
+24 passed in 0.03s
+
+356f210 refactor: rename price local for clarity
+........................                                                 [100%]
+24 passed in 0.02s
+
+751a25a refactor: extract base price selection
+........................                                                 [100%]
+24 passed in 0.03s
+
+c2fea84 refactor: extract quantity validation
+........................                                                 [100%]
+24 passed in 0.03s
+
+291f39c refactor: extract role discount calculation
+........................                                                 [100%]
+24 passed in 0.02s
+
+ab1e0cd refactor: extract bulk discount calculation
+........................                                                 [100%]
+24 passed in 0.02s
+
+0971ad5 refactor: extract coupon application
+........................                                                 [100%]
+24 passed in 0.02s
+
+fe28348 refactor: extract service fee bands
+........................                                                 [100%]
+24 passed in 0.02s

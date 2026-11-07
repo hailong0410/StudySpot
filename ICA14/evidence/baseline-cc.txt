@@ -1,0 +1,5 @@
+legacy_pricing.py
+    F 8:0 calc - E (31)
+
+1 blocks (classes, functions, methods) analyzed.
+Average complexity: E (31.0)

@@ -1,12 +1,25 @@
-# ICA -- Refactor the legacy pricing module
+# ICA14 — Refactor the Legacy Pricing Module
+
+Hai Long Ha — Group 6. This independent course exercise is stored inside StudySpot.
+
+Branch: https://github.com/hailong0410/StudySpot/tree/refactor/ica14-pricing
+
+Completed worksheets and commit log: [REFACTOR_NOTES.md](../REFACTOR_NOTES.md).
+
+From the repository root:
 
 ```bash
-pip install pytest radon
-pytest -q                          # 24 characterization tests, all green
-radon cc -s legacy_pricing.py      # record the "before" numbers
-radon mi -s legacy_pricing.py
+cd ICA14
+python -m pip install -r requirements.txt
+python -m pytest -q
+python verify_behavior.py
+python -m radon cc -s -a legacy_pricing.py
+python -m radon mi -s legacy_pricing.py
+python -m radon raw legacy_pricing.py
 ```
-Refactor in small steps. Run `pytest -q` after EVERY step and commit each green step.
-Keep the public function `calc(t, q, u, d, c=None, w=False)` working (other code calls it).
-Do not change any test's expected value. If you believe a behavior is a bug, write it in the
-worksheet; fixing it is a separate decision for after the refactor.
+
+Expected: 24 tests pass; 27,000 cases match; calc CC 3 (A); maximum function CC 9 (B); MI 49.77 (A).
+
+`evidence/` contains the unchanged original module, before/after measurements, and replay/integration check outputs. The supplied test file and public calc signature are unchanged. Pricing is not wired into the StudySpot application.
+
+The baseline and seven refactoring steps are separate commits on this branch. Submit this branch URL on Brightspace. See [SUBMISSION_GUIDE_VI.md](SUBMISSION_GUIDE_VI.md).
