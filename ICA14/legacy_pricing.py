@@ -18,14 +18,7 @@ def calc(t, q, u, d, c=None, w=False):
         total = total + 2.0
     if total < 0:
         total = 0.0
-    fee = 0.0
-    if total > 0:
-        if total < 20:
-            fee = 1.0
-        elif total < 100:
-            fee = 2.5
-        else:
-            fee = 5.0
+    fee = _service_fee(total)
     return round(total + fee, 2)
 
 
@@ -94,3 +87,15 @@ def _apply_coupon(total, event_type, user, coupon):
         else:
             raise ValueError("bad coupon")
     return total
+
+
+def _service_fee(total):
+    fee = 0.0
+    if total > 0:
+        if total < 20:
+            fee = 1.0
+        elif total < 100:
+            fee = 2.5
+        else:
+            fee = 5.0
+    return fee
