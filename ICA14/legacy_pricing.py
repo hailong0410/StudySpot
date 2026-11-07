@@ -9,10 +9,7 @@ def calc(t, q, u, d, c=None, w=False):
     # t = event type, q = quantity, u = user dict, d = day of week (0=Mon..6=Sun),
     # c = coupon code, w = waitlist
     base_price = _base_price(t, d)
-    if q <= 0:
-        raise ValueError("bad qty")
-    if q > 10:
-        raise ValueError("too many")
+    _validate_quantity(q)
     total = base_price * q
     if u is not None:
         if u.get("role") == "student":
@@ -75,3 +72,10 @@ def _base_price(event_type, day):
     else:
         raise ValueError("bad type")
     return base_price
+
+
+def _validate_quantity(quantity):
+    if quantity <= 0:
+        raise ValueError("bad qty")
+    if quantity > 10:
+        raise ValueError("too many")
