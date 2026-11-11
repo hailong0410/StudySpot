@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def build(version: str, output_dir: Path) -> Path:
     if not re.fullmatch(r'[A-Za-z0-9._-]+', version):
         raise ValueError('Version must contain only letters, digits, dots, underscores or hyphens')
-    names = ['app.py', 'domain.py', 'schema.sql', 'requirements-runtime-lock.txt']
+    names = ['app.py', 'domain.py', 'schema.sql', 'campus-spaces.json', 'requirements-runtime-lock.txt']
     paths = [ROOT / name for name in names]
     paths.extend(sorted((ROOT / 'templates').glob('*.html')))
     paths.extend(sorted((ROOT / 'static').rglob('*')))
@@ -32,8 +32,10 @@ python app.py
 
 Open http://127.0.0.1:5000 in a browser. Stop the app with Ctrl+C.
 The app creates a local instance directory, sample database and session key on first run.
-The eight locations are fictional samples. Reports are saved locally across restarts.
-Accounts, favorites, maps and verified live campus data are not implemented.
+The default catalog lists Vanderbilt study spaces with official hours and library details.
+Reports are saved locally across restarts. No observations are seeded.
+The space-detail report panel checks for new observations every five seconds while visible.
+Accounts, favorites, maps and sensor-based occupancy are not implemented.
 This build does not include the development test suite; see the project repository for tests.
 
 Repository: https://github.com/hailong0410/StudySpot

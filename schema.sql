@@ -15,3 +15,14 @@ CREATE TABLE IF NOT EXISTS status_reports (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_reports_space_time ON status_reports(space_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS report_cooldowns (
+    space_id INTEGER NOT NULL REFERENCES study_spaces(id),
+    source TEXT NOT NULL,
+    expires_at REAL NOT NULL,
+    PRIMARY KEY (space_id, source)
+);
+CREATE INDEX IF NOT EXISTS idx_cooldowns_expiry ON report_cooldowns(expires_at);
+CREATE TABLE IF NOT EXISTS catalog_identity (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    dataset TEXT NOT NULL CHECK (dataset IN ('campus', 'sample'))
+);

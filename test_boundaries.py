@@ -107,6 +107,7 @@ def test_default_startup_keeps_session_key_and_sample_data(tmp_path, monkeypatch
     schema = Path(studyspot.__file__).with_name('schema.sql').read_text()
     (tmp_path / 'schema.sql').write_text(schema)
     monkeypatch.setattr(studyspot, 'BASE', tmp_path)
+    monkeypatch.setenv('STUDYSPOT_DATASET', 'sample')
     monkeypatch.delenv('STUDYSPOT_SECRET', raising=False)
     first = studyspot.create_app()
     assert first.test_client().get('/health').status_code == 200

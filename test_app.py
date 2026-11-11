@@ -56,7 +56,7 @@ def test_report_saved_and_survives_new_app(client, app):
     csrf = token(client)
     r = client.post("/spaces/1/reports", data={"csrf_token": csrf, "crowd": "medium", "noise": "quiet"})
     assert r.status_code == 303
-    reopened = create_app({"TESTING": True, "SECRET_KEY": "other-key", "DATABASE": app.config["DATABASE"]}).test_client()
+    reopened = create_app({"TESTING": True, "DATASET": "sample", "SECRET_KEY": "other-key", "DATABASE": app.config["DATABASE"]}).test_client()
     page = reopened.get("/spaces/1")
     assert b"Somewhat busy" in page.data
     assert b"Recent observation" in page.data
@@ -78,7 +78,7 @@ def test_missing_csrf_does_not_write(client, app):
 def test_stale_report_warning(client, app):
     with sqlite3.connect(app.config["DATABASE"]) as db:
         db.execute("INSERT INTO status_reports(space_id,crowd,noise,created_at) VALUES (1,'high','loud',?)", ((utc_now() - timedelta(minutes=61)).isoformat(),))
-    assert b"over 60 minutes old" in client.get("/spaces/1").data
+    assert b"at least 60 minutes old" in client.get("/spaces/1").data
 
 
 def test_latest_report_and_space_isolation(client, app):
