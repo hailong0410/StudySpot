@@ -3,9 +3,10 @@
 [![StudySpot CI](https://github.com/hailong0410/StudySpot/actions/workflows/ci.yml/badge.svg)](https://github.com/hailong0410/StudySpot/actions/workflows/ci.yml)
 
 
-A small, working Flask + SQLite prototype for Hai Long Ha's individual project.
-All eight locations and amenities are **fictional sample data**. No live Vanderbilt
-availability, occupancy measurement, official booking, or verified campus dataset is included.
+StudySpot is a student-built app for finding real Vanderbilt study spaces. The
+catalog links to official library hours and room information, with directions to
+each building. The crowd and noise panel shows observations submitted by
+visitors and starts empty for every space.
 
 ## Start on Windows
 
@@ -36,25 +37,32 @@ python3 -m venv .venv
 
 ## What works now
 
-- Browse eight sample locations.
+- Browse six study spaces listed by Vanderbilt Libraries.
 - Search by name, case insensitive, with a clear empty result.
-- Filter individual/group use, outlets, and usual quiet atmosphere. Filters combine.
+- Filter individual/group use and designated quiet spaces. Filters combine.
 - Read location details.
 - Submit an anonymous crowd/noise observation and save it to SQLite.
 - View the latest observation, its UTC timestamp, and up to five recent reports.
-- See a warning for reports at least 60 minutes old.
+- Refresh the space-detail observation panel automatically every five seconds in an active tab.
+- See a warning for reports at least 60 minutes old, or a connection notice when updates cannot load.
+- Limit anonymous repeat reports from the same direct network address for the same space for 60 seconds.
+  The stored limiter key is a short-lived HMAC, and the check and report write share a SQLite transaction.
 - Basic server validation, parameterized SQL, escaped HTML, and CSRF form tokens.
 
-Accounts, favorites, administration, verified real locations, map links and public
-hosting are **not implemented**. Anonymous reporting is an explicit temporary scope
-choice, with spam prevention and identity planned for a later sprint.
+The Flask app accepts anonymous observations and links to the official hours and directions. Anonymous reporting is an explicit temporary scope
+choice. The cooldown limits repeated submissions from one address. People sharing an address
+share a cooldown, and different addresses can bypass this control. Deployments behind a reverse
+proxy need a trusted peer-address configuration or an account-based limiter before sharing the app.
+Community observations are unverified and may differ from current conditions.
 
 ## Data and reset
 
-The app creates `instance/studyspot.sqlite3` and a local random session key on first
-launch. Reports persist after restarting. To reset demo reports, stop the app,
-delete `instance/studyspot.sqlite3`, then restart. This removes only sample data and
-demo reports. Do not delete a database you need to keep.
+The app creates `instance/studyspot-campus.sqlite3` and a local random session key on first
+launch. Older fictional-space data stays in `instance/studyspot.sqlite3`. On POSIX, the app restricts the instance folder and local signing key to the running user.
+On Windows, place the project inside the user profile and use private inherited ACLs on the instance folder.
+Use `STUDYSPOT_SECRET` for an externally managed signing key. Existing session keys are reused.
+Reports persist after restarting. The campus catalog never imports older sample reports.
+Tests use their own temporary databases.
 
 ## Checks
 
@@ -93,4 +101,12 @@ GitHub Actions checks PRs targeting main and pushes to main. After a successful 
 
 To run a downloaded artifact, extract it, install `requirements-runtime-lock.txt`, and run `python app.py`. It needs Python 3.12 for the pinned Sprint 3 build. There is no automatic public deployment.
 
-The workflow and Sprint 3 code are currently prepared locally. A green GitHub run, enforced main protection, an independent approving review and the sprint3 tag are still needed before the sprint can be marked complete.
+The Sprint 4 candidate adds parallel Bandit, pip-audit and gitleaks checks. See
+[the local security audit](docs/security/sprint4-audit.md) and
+[the demo guide](docs/SPRINT4_DEMO_GUIDE.md).
+
+## Shared web deployment
+
+The hosted pilot uses the same catalog and study-space UI with a shared D1
+database. See [hosting/README.md](hosting/README.md) for deployment architecture
+and isolated verification commands. The web and local databases are separate.

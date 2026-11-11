@@ -1,0 +1,26 @@
+{% set latest = reports|first if reports else none %}
+<div id="observations">
+  <section id="latest" class="latest" aria-labelledby="latest-title">
+    <h2 id="latest-title">Latest crowd and noise report</h2>
+    {% if latest %}
+      <p class="report-main">{{ latest.crowd_label }} <span>·</span> {{ latest.noise_label }}</p>
+      <p class="report-time">{{ latest.age }} · <time datetime="{{ latest.created_at }}">{{ latest.display_time }}</time></p>
+      {% if latest.stale %}
+        <p class="stale">This report is at least 60 minutes old. Conditions may have changed.</p>
+      {% else %}
+        <p class="fresh">Recent observation. Conditions may still change.</p>
+      {% endif %}
+    {% else %}
+      <p>No updates yet.</p>
+      <p class="muted">Be the first to share what you notice.</p>
+    {% endif %}
+  </section>
+  {% if reports %}
+    <section class="history" aria-labelledby="history-title">
+      <h2 id="history-title">Recent observations</h2>
+      {% for report in reports %}
+        <div class="history-row"><span>{{ report.crowd_label }} · {{ report.noise_label }}</span><span>{{ report.age }}</span></div>
+      {% endfor %}
+    </section>
+  {% endif %}
+</div>

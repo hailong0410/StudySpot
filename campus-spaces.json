@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "name": "Central Library · Sixth Floor",
+    "location": "Central Library, sixth floor",
+    "description": "Designated quiet floor with reading rooms and study alcoves.",
+    "study_type": "individual",
+    "atmosphere": "quiet",
+    "hours_url": "https://www.library.vanderbilt.edu/central/hours/",
+    "source_url": "https://www.library.vanderbilt.edu/about/quiet-study/",
+    "map_query": "Vanderbilt Central Library Nashville"
+  },
+  {
+    "id": 2,
+    "name": "Peabody Library · Grand Reading Room",
+    "location": "Peabody Library",
+    "description": "Designated quiet reading room for individual study and research.",
+    "study_type": "individual",
+    "atmosphere": "quiet",
+    "hours_url": "https://www.library.vanderbilt.edu/peabody/hours/",
+    "source_url": "https://www.library.vanderbilt.edu/peabody/library-noise-level-options/",
+    "map_query": "Vanderbilt Peabody Library Nashville"
+  },
+  {
+    "id": 3,
+    "name": "Peabody Library · Fireside Reading Room",
+    "location": "Peabody Library",
+    "description": "Designated quiet room for reading and independent work.",
+    "study_type": "individual",
+    "atmosphere": "quiet",
+    "hours_url": "https://www.library.vanderbilt.edu/peabody/hours/",
+    "source_url": "https://www.library.vanderbilt.edu/peabody/library-noise-level-options/",
+    "map_query": "Vanderbilt Peabody Library Nashville"
+  },
+  {
+    "id": 4,
+    "name": "Peabody Library · Grand Floor Project Room",
+    "location": "Peabody Library, Grand Floor",
+    "description": "Collaborative space suitable for discussion and group work.",
+    "study_type": "group",
+    "atmosphere": "moderate",
+    "hours_url": "https://www.library.vanderbilt.edu/peabody/hours/",
+    "source_url": "https://www.library.vanderbilt.edu/about/quiet-study/",
+    "map_query": "Vanderbilt Peabody Library Nashville"
+  },
+  {
+    "id": 5,
+    "name": "Science and Engineering Library · Room 3211",
+    "location": "Stevenson Science and Engineering Library, room 3211",
+    "description": "Reservable study room. Consult the library for room policies and reservations.",
+    "study_type": "group",
+    "atmosphere": "moderate",
+    "hours_url": "https://www.library.vanderbilt.edu/science/hours/",
+    "source_url": "https://www.library.vanderbilt.edu/science/sel-study-rooms/",
+    "map_query": "Vanderbilt Stevenson Science and Engineering Library Nashville"
+  },
+  {
+    "id": 6,
+    "name": "Science and Engineering Library · Room 3238",
+    "location": "Stevenson Science and Engineering Library, room 3238",
+    "description": "Reservable study room. Consult the library for room policies and reservations.",
+    "study_type": "group",
+    "atmosphere": "moderate",
+    "hours_url": "https://www.library.vanderbilt.edu/science/hours/",
+    "source_url": "https://www.library.vanderbilt.edu/science/sel-study-rooms/",
+    "map_query": "Vanderbilt Stevenson Science and Engineering Library Nashville"
+  }
+]
