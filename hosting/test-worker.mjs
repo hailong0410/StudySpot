@@ -90,3 +90,20 @@ test("report validation and per-space cooldown run before a second write", async
   assert.equal((await request("/spaces/2/reports", report())).status, 303);
   assert.equal((await request("/spaces/1/reports", report({ address: "192.0.2.2" }))).status, 303);
 });
+
+
+test("report timestamps show Nashville time in winter and summer", async (t) => {
+  let now = Date.parse("2026-11-11T23:19:00Z");
+  t.mock.method(Date, "now", () => now);
+  const request = fixture();
+
+  assert.equal((await request("/spaces/1/reports", report())).status, 303);
+  now += 60_000;
+  const winter = await (await request("/spaces/1/live")).text();
+  assert.match(winter, /1 min ago.*datetime="2026-11-11T23:19:00.000Z".*5:19 PM CST/);
+
+  now = Date.parse("2026-07-11T23:19:00Z");
+  assert.equal((await request("/spaces/2/reports", report())).status, 303);
+  const summer = await (await request("/spaces/2/live")).text();
+  assert.match(summer, /datetime="2026-07-11T23:19:00.000Z".*6:19 PM CDT/);
+});

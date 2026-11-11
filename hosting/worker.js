@@ -5,6 +5,16 @@ const headers = {
   "x-content-type-options": "nosniff",
 };
 
+const campusTime = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Chicago",
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZoneName: "short",
+});
+
 const minute = 60_000;
 const historyRetention = 7 * 24 * 60 * minute;
 const recentQuery = "SELECT crowd, noise, created_at FROM observations WHERE space_id = ? AND created_at >= ? ORDER BY created_at DESC, id DESC LIMIT 5";
@@ -42,7 +52,7 @@ function observationPanel(rows, now) {
 
   const [latest] = rows;
   const datetime = new Date(latest.created_at).toISOString();
-  const displayTime = datetime.slice(0, 16).replace("T", " ") + " UTC";
+  const displayTime = campusTime.format(latest.created_at);
   const stale = now - latest.created_at >= 60 * minute;
   const note = stale
     ? '<p class="stale">This report is at least 60 minutes old. Conditions may have changed.</p>'
