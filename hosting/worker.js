@@ -1,7 +1,7 @@
 /* The build supplies trusted HTML, CSS, JS and choice labels from the Flask project. */
 const headers = {
   "cache-control": "no-store",
-  "content-security-policy": "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+  "content-security-policy": "default-src 'self'; base-uri 'none'; frame-ancestors 'self' https://chatgpt.com; form-action 'self'",
   "x-content-type-options": "nosniff",
 };
 

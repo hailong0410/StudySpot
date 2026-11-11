@@ -57,6 +57,11 @@ test("real catalog starts empty and a second client sees the report for the same
   assert.deepEqual(await (await request("/health")).json(), { status: "ok", dataset: "campus" });
   assert.match(await (await request("/")).text(), /Grand Reading Room/);
   const initial = await request("/spaces/1");
+  const policy = initial.headers.get("content-security-policy");
+  assert.equal(
+    policy.split(";").map((directive) => directive.trim()).find((directive) => directive.startsWith("frame-ancestors ")),
+    "frame-ancestors 'self' https://chatgpt.com",
+  );
   const initialPage = await initial.text();
   assert.match(initialPage, /No updates yet/);
   assert.match(initialPage, /Official hours/);
@@ -73,6 +78,7 @@ test("real catalog starts empty and a second client sees the report for the same
 test("report validation and per-space cooldown run before a second write", async () => {
   const request = fixture();
   assert.equal((await request("/spaces/1/reports", report({ site: "https://other.test" }))).status, 403);
+  assert.equal((await request("/spaces/1/reports", report({ site: "https://chatgpt.com" }))).status, 403);
   assert.equal((await request("/spaces/1/reports", report({ body: "crowd=toString&noise=loud" }))).status, 400);
   assert.equal((await request("/spaces/1/reports", report({ body: "x".repeat(1025) }))).status, 413);
   assert.equal((await request("/spaces/99/reports", report())).status, 404);

@@ -3,6 +3,8 @@
 The Flask app and hosted pilot share the verified campus catalog, discovery
 pages, styles and five-second observation panel. The hosted Worker implements
 the observation endpoints on a durable D1 database so visitors share one feed.
+The Worker permits embedding on its own origin and in the ChatGPT preview
+at https://chatgpt.com. The form still requires the StudySpot origin.
 The two environments have separate report databases.
 
 Set a secret named REPORT_SOURCE_KEY in the hosting environment. Production
