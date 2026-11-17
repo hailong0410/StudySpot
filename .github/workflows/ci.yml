@@ -120,6 +120,24 @@ jobs:
           docker compose up -d --wait --wait-timeout 90
           test "$(docker compose exec -T app id -u)" = "10001"
           python scripts/smoke.py http://127.0.0.1:5000 "$COMMIT_SHA"
+      - name: Export verified Docker image
+        if: github.event_name == 'pull_request'
+        run: |
+          image_id=$(docker compose images -q app)
+          docker image tag "$image_id" studyspot:sprint5
+          docker image save studyspot:sprint5 | gzip -n > StudySpot-Docker-amd64.tar.gz
+          docker image rm studyspot:sprint5
+          docker image load --input StudySpot-Docker-amd64.tar.gz
+          test "$(docker image inspect --format '{{.Id}}' studyspot:sprint5)" = "$(docker image inspect --format '{{.Id}}' "$image_id")"
+      - name: Upload verified Docker image
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: StudySpot-Docker-amd64
+          path: StudySpot-Docker-amd64.tar.gz
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
       - name: Remove test services
         if: always()
         run: docker compose down --volumes
