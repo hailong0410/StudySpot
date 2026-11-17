@@ -1,0 +1,20 @@
+services:
+  app:
+    image: ${STUDYSPOT_IMAGE:?Use the immutable registry image digest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${HOST_PORT:?Configure a dedicated loopback port}:5000"
+    environment:
+      STUDYSPOT_ENV: ${STUDYSPOT_ENV:?Use staging or production}
+      STUDYSPOT_SECRET: ${STUDYSPOT_SECRET:?Set a strong unique signing key}
+      STUDYSPOT_SECURE_COOKIE: "1"
+      STUDYSPOT_TRUST_PROXY: "1"
+    volumes:
+      - app-data:/data
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  app-data:

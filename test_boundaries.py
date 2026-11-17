@@ -99,7 +99,10 @@ def test_health_returns_status_with_real_database(client, app):
         assert client.get('/').status_code == 200
         response = client.get('/health')
     assert response.status_code == 200
-    assert response.get_json() == {'status': 'ok', 'dataset': 'sample'}
+    result = response.get_json()
+    assert result['status'] == 'ok'
+    assert result['dataset'] == 'sample'
+    assert result['database'] == 'reachable'
 
 
 def test_default_startup_keeps_session_key_and_sample_data(tmp_path, monkeypatch):

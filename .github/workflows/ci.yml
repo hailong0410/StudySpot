@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checks:
@@ -87,7 +87,7 @@ jobs:
         run: '"$RUNNER_TEMP/gitleaks" git --redact --log-opts=--all'
 
   publish-artifact:
-    needs: [checks, security]
+    needs: [checks, security, container-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -103,5 +103,82 @@ jobs:
         with:
           name: StudySpot-${{ github.sha }}
           path: dist/StudySpot-${{ github.sha }}.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  container-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build and verify the runtime
+        env:
+          STUDYSPOT_LOCAL_PORT: "5000"
+        run: |
+          export COMMIT_SHA="$GITHUB_SHA"
+          docker compose build --build-arg COMMIT_SHA="$COMMIT_SHA"
+          docker compose up -d --wait --wait-timeout 90
+          test "$(docker compose exec -T app id -u)" = "10001"
+          python scripts/smoke.py http://127.0.0.1:5000 "$COMMIT_SHA"
+      - name: Remove test services
+        if: always()
+        run: docker compose down --volumes
+
+  publish-image:
+    needs: [checks, security, container-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Publish commit image and capture registry digest
+        id: publish
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker buildx build --build-arg "COMMIT_SHA=$GITHUB_SHA" \
+            --tag "$image:$GITHUB_SHA" --push --metadata-file "$RUNNER_TEMP/image.json" .
+          digest=$(jq -er '."containerimage.digest" | select(test("^sha256:[0-9a-f]{64}$"))' "$RUNNER_TEMP/image.json")
+          echo "image=$image@$digest" >> "$GITHUB_OUTPUT"
+
+  staging:
+    needs: [publish-image]
+    if: vars.ENABLE_STAGING == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment:
+      name: staging
+      url: ${{ vars.APP_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Deploy immutable image
+        env:
+          IMAGE: ${{ needs.publish-image.outputs.image }}
+          DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: bash scripts/remote-deploy.sh "$IMAGE"
+      - name: Run authenticated staging smoke tests
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          SMOKE_USER: ${{ secrets.SMOKE_USER }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: python scripts/smoke.py "$APP_URL" "$GITHUB_SHA" --authenticated --record
+      - name: Record tested image
+        env:
+          IMAGE: ${{ needs.publish-image.outputs.image }}
+        run: |
+          jq -n --arg image "$IMAGE" --arg commit "$GITHUB_SHA" --arg version "$(cat VERSION)"             '{image:$image,commit:$commit,version:$version}' > staged-image.json
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: staged-image-${{ github.sha }}
+          path: staged-image.json
           if-no-files-found: error
           retention-days: 30

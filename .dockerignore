@@ -1,0 +1,11 @@
+**
+!requirements-runtime-lock.txt
+!VERSION
+!app.py
+!domain.py
+!schema.sql
+!campus-spaces.json
+!templates/
+!templates/**
+!static/
+!static/**

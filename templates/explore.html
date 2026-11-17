@@ -5,5 +5,20 @@
 {% if not campus %}<div><label for="outlets">Power outlets</label><select id="outlets" name="outlets"><option value="">Any</option><option value="yes" {% if filters.outlets %}selected{% endif %}>Has outlets</option></select></div>{% endif %}
 <div><label for="atmosphere">Usual atmosphere</label><select id="atmosphere" name="atmosphere"><option value="">Any</option><option value="quiet" {% if filters.atmosphere %}selected{% endif %}>Quiet</option></select></div>
 <div class="filter-actions"><button type="submit">Find spaces</button><a href="{{ url_for('explore') }}">Clear</a></div></form>
-<section class="spaces" aria-label="Search results">{% for s in spaces %}<article data-study="{{ s.study_type }}" data-atmosphere="{{ s.atmosphere }}" class="space"><p class="location">{{ s.location }}</p><h2><a href="{{ url_for('detail', space_id=s.id) }}">{{ s.name }}</a></h2><p>{{ s.description }}</p><ul class="amenities"><li>{{ 'Individual & group' if s.study_type=='both' else s.study_type|capitalize + ' study' }}</li>{% if not campus %}<li>{{ 'Has outlets' if s.outlets else 'No outlets in sample' }}</li>{% endif %}{% if s.atmosphere == 'quiet' %}<li>Quiet study</li>{% endif %}</ul><a class="details-link" href="{{ url_for('detail', space_id=s.id) }}">View space</a></article>{% else %}<div class="empty"><h2>No matching spaces</h2><p>Try fewer filters or a different name.</p><a href="{{ url_for('explore') }}">Show all spaces</a></div>{% endfor %}</section>
+{% if spaces %}<p class="muted" id="space-update-message" role="status" hidden></p>{% endif %}
+<section class="spaces" aria-label="Search results" data-space-statuses="{{ url_for('space_statuses') }}">
+{% for s in spaces %}
+<article data-study="{{ s.study_type }}" data-atmosphere="{{ s.atmosphere }}" class="space">
+  <p class="location">{{ s.location }}</p>
+  <h2><a href="{{ url_for('detail', space_id=s.id) }}">{{ s.name }}</a></h2>
+  <p>{{ s.description }}</p>
+  <ul class="amenities"><li>{{ 'Individual & group' if s.study_type=='both' else s.study_type|capitalize + ' study' }}</li>{% if not campus %}<li>{{ 'Has outlets' if s.outlets else 'No outlets in sample' }}</li>{% endif %}{% if s.atmosphere == 'quiet' %}<li>Quiet study</li>{% endif %}</ul>
+  <p class="space-status" data-space-id="{{ s.id }}"><strong>Latest visitor report</strong><span>See space for reports.</span></p>
+  <a class="details-link" href="{{ url_for('detail', space_id=s.id) }}">View space</a>
+</article>
+{% else %}
+<div class="empty"><h2>No matching spaces</h2><p>Try fewer filters or a different name.</p><a href="{{ url_for('explore') }}">Show all spaces</a></div>
+{% endfor %}
+</section>
+{% if spaces %}<script src="{{ url_for('static', filename='space-statuses.js') }}" defer></script>{% endif %}
 {% endblock %}

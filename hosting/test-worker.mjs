@@ -107,3 +107,26 @@ test("report timestamps show Nashville time in winter and summer", async (t) => 
   const summer = await (await request("/spaces/2/live")).text();
   assert.match(summer, /datetime="2026-07-11T23:19:00.000Z".*6:19 PM CDT/);
 });
+
+test("the home feed shows the newest report for each space after concurrent writes", async (t) => {
+  let now = Date.parse("2026-11-16T18:00:00Z");
+  t.mock.method(Date, "now", () => now);
+  const request = fixture();
+  assert.match(await (await request("/")).text(), /data-space-statuses="\/spaces\/statuses"/);
+  assert.equal((await request("/static/space-statuses.js")).status, 200);
+  assert.deepEqual(await (await request("/spaces/statuses")).json(), {});
+  const writes = await Promise.all([
+    request("/spaces/1/reports", report()),
+    request("/spaces/1/reports", report({ address: "192.0.2.2", body: "crowd=low&noise=quiet" })),
+  ]);
+  assert.deepEqual(writes.map((response) => response.status), [303, 303]);
+  const feed = await request("/spaces/statuses");
+  assert.equal(feed.headers.get("cache-control"), "no-store");
+  const statuses = await feed.json();
+  assert.deepEqual(Object.keys(statuses), ["1"]);
+  assert.equal(statuses["1"].age, "Just now");
+  assert.equal(statuses["1"].stale, false);
+  assert.ok((await (await request("/spaces/1/live")).text()).split("Recent observations")[0].includes(statuses["1"].crowd));
+  now += 60_000 * 60;
+  assert.equal((await (await request("/spaces/statuses")).json())["1"].stale, true);
+});
