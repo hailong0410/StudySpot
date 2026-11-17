@@ -1,0 +1,102 @@
+name: StudySpot production release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing stable vMAJOR.MINOR.PATCH tag that matches VERSION
+        required: true
+        type: string
+      staging_run:
+        description: Successful main CI run ID for the selected tag
+        required: true
+        type: string
+      rollback:
+        description: Redeploy a previously published release without creating another release
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.preflight.outputs.image }}
+      commit: ${{ steps.preflight.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Verify tag and staging smoke evidence
+        id: preflight
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.release_tag }}
+          RUN_ID: ${{ inputs.staging_run }}
+          ROLLBACK: ${{ inputs.rollback }}
+        run: |
+          [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          sha=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
+          git merge-base --is-ancestor "$sha" HEAD
+          if [[ "$ROLLBACK" == "true" ]]; then
+            gh release view "$TAG" > /dev/null
+          fi
+          workflow=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml" --jq .id)
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" | jq -e \
+            --arg sha "$sha" --arg repo "$GITHUB_REPOSITORY" --argjson workflow "$workflow" \
+            '.head_sha == $sha and .workflow_id == $workflow and .head_branch == "main" and
+             .event == "push" and .conclusion == "success" and .head_repository.full_name == $repo' >/dev/null
+          gh run download "$RUN_ID" --name "staged-image-$sha" --dir "$RUNNER_TEMP/staging"
+          image=$(jq -er --arg sha "$sha" --arg version "${TAG#v}" \
+            'select(.commit == $sha and .version == $version).image |
+             select(test("^ghcr.io/hailong0410/studyspot@sha256:[0-9a-f]{64}$"))' \
+            "$RUNNER_TEMP/staging/staged-image.json")
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "commit=$sha" >> "$GITHUB_OUTPUT"
+
+  production:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Deploy tested image digest
+        env:
+          IMAGE: ${{ needs.verify.outputs.image }}
+          DEPLOY_TARGET: ${{ vars.DEPLOY_TARGET }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: bash scripts/remote-deploy.sh "$IMAGE"
+      - name: Verify production health and catalog
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          IMAGE_SHA: ${{ needs.verify.outputs.commit }}
+        run: python scripts/smoke.py "$APP_URL" "$IMAGE_SHA"
+      - name: Publish GitHub Release
+        if: inputs.rollback == false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.release_tag }}
+          IMAGE: ${{ needs.verify.outputs.image }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            {
+              cat docs/ops/RELEASE_NOTES.md
+              printf '\nImage digest: %s\n' "$IMAGE"
+            } > "$RUNNER_TEMP/release-notes.md"
+            gh release create "$TAG" --verify-tag --title "StudySpot $TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi

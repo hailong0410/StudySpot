@@ -1,9 +1,11 @@
 """Pure rules for StudySpot discovery, report validation and report age."""
 from datetime import datetime
 from typing import Any, Mapping
+from zoneinfo import ZoneInfo
 
 CROWD = {"low": "Not busy", "medium": "Somewhat busy", "high": "Very busy"}
 NOISE = {"quiet": "Quiet", "moderate": "Some conversation", "loud": "Loud"}
+CAMPUS_TIME_ZONE = ZoneInfo("America/Chicago")
 
 
 def parse_filters(q: str, study: str, outlets: str, atmosphere: str) -> dict[str, str]:
@@ -49,4 +51,5 @@ def report_view(row: Mapping[str, Any] | None, now: datetime) -> dict[str, Any] 
     posted = datetime.fromisoformat(row["created_at"])
     minutes = max(0, int((now - posted).total_seconds() // 60))
     age = "Just now" if minutes == 0 else (f"{minutes} min ago" if minutes < 60 else (f"{minutes // 60} hours ago" if minutes < 1440 else f"{minutes // 1440} days ago"))
-    return dict(row) | {"age": age, "stale": minutes >= 60, "crowd_label": CROWD[row["crowd"]], "noise_label": NOISE[row["noise"]], "display_time": posted.strftime("%Y-%m-%d %H:%M UTC")}
+    display_time = posted.astimezone(CAMPUS_TIME_ZONE).strftime("%Y-%m-%d %H:%M %Z")
+    return dict(row) | {"age": age, "stale": minutes >= 60, "crowd_label": CROWD[row["crowd"]], "noise_label": NOISE[row["noise"]], "display_time": display_time}

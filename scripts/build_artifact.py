@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def build(version: str, output_dir: Path) -> Path:
     if not re.fullmatch(r'[A-Za-z0-9._-]+', version):
         raise ValueError('Version must contain only letters, digits, dots, underscores or hyphens')
-    names = ['app.py', 'domain.py', 'schema.sql', 'campus-spaces.json', 'requirements-runtime-lock.txt']
+    names = ['app.py', 'domain.py', 'schema.sql', 'campus-spaces.json', 'requirements-runtime-lock.txt', 'VERSION']
     paths = [ROOT / name for name in names]
     paths.extend(sorted((ROOT / 'templates').glob('*.html')))
     paths.extend(sorted((ROOT / 'static').rglob('*')))

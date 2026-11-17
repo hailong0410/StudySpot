@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:${STUDYSPOT_LOCAL_PORT:-5000}:5000"
+    environment:
+      STUDYSPOT_ENV: local
+      STUDYSPOT_DATASET: "${STUDYSPOT_DATASET:-campus}"
+    volumes:
+      - studyspot-data:/data
+
+volumes:
+  studyspot-data:

@@ -4,6 +4,7 @@ from math import ceil
 from pathlib import Path
 import hmac
 import json
+import logging
 import os
 import secrets
 import sqlite3
@@ -13,6 +14,7 @@ from urllib.parse import urlencode
 from flask import Flask, Response, abort, flash, g, redirect, render_template, request, session, url_for
 
 from werkzeug.exceptions import TooManyRequests
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from domain import CROWD, NOISE, build_space_query, parse_filters, report_view, validate_report_fields
 
@@ -51,6 +53,14 @@ def local_session_key(instance):
     return key_path.read_text(encoding="utf-8").strip()
 
 
+class StudySpotApp(Flask):
+    def log_exception(self, exc_info):
+        # Flask's default message includes the raw URL path. The response logger
+        # records the matched route instead, with a request ID and no traceback.
+        if os.environ.get("STUDYSPOT_JSON_LOGS") != "1":
+            super().log_exception(exc_info)
+
+
 def create_app(test_config=None):
     dataset = (test_config or {}).get("DATASET", os.environ.get("STUDYSPOT_DATASET", "campus"))
     if dataset not in ("campus", "sample"):
@@ -59,8 +69,11 @@ def create_app(test_config=None):
     catalog = {
         entry["id"]: entry for entry in json.loads((BASE / "campus-spaces.json").read_text(encoding="utf-8"))
     } if campus else {}
-    app = Flask(__name__)
-    instance = BASE / "instance"
+    app = StudySpotApp(__name__)
+    if os.environ.get("STUDYSPOT_TRUST_PROXY") == "1":
+        # Only enable behind the single trusted reverse proxy described in the runbook.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)  # type: ignore[method-assign]
+    instance = Path(os.environ.get("STUDYSPOT_INSTANCE", str(BASE / "instance")))
     instance.mkdir(mode=0o700, exist_ok=True)
     if os.name == "posix":
         instance.chmod(0o700)
@@ -71,8 +84,18 @@ def create_app(test_config=None):
                       SESSION_COOKIE_SECURE=os.environ.get("STUDYSPOT_SECURE_COOKIE") == "1")
     if test_config:
         app.config.update(test_config)
+    deployment = os.environ.get("STUDYSPOT_ENV", "local")
     if not app.config.get("SECRET_KEY"):
-        app.config["SECRET_KEY"] = os.environ.get("STUDYSPOT_SECRET") or local_session_key(instance)
+        external_key = os.environ.get("STUDYSPOT_SECRET")
+        if deployment in {"staging", "production"} and (
+            not external_key or len(external_key) < 32 or not app.config["SESSION_COOKIE_SECURE"]
+        ):
+            raise RuntimeError("Hosted environments require a strong signing key and secure cookies.")
+        app.config["SECRET_KEY"] = external_key or local_session_key(instance)
+    version_file = BASE / "VERSION"
+    app_version = version_file.read_text(encoding="utf-8").strip() if version_file.exists() else "development"
+    commit_sha = os.environ.get("STUDYSPOT_COMMIT", "local")
+    json_logs = os.environ.get("STUDYSPOT_JSON_LOGS") == "1"
 
     def get_db():
         if "db" not in g:
@@ -89,9 +112,10 @@ def create_app(test_config=None):
 
     with app.app_context():
         db = get_db()
-        db.executescript((BASE / "schema.sql").read_text(encoding="utf-8"))
         with db:
-            db.execute("BEGIN IMMEDIATE")
+            db.executescript("BEGIN IMMEDIATE;\n" + (BASE / "schema.sql").read_text(encoding="utf-8"))
+            if db.execute("PRAGMA user_version").fetchone()[0] == 0:
+                db.execute("PRAGMA user_version = 1")
             identity = db.execute("SELECT dataset FROM catalog_identity WHERE id=1").fetchone()
             if identity and identity["dataset"] != dataset:
                 raise ValueError("The database belongs to a different StudySpot catalog.")
@@ -117,12 +141,32 @@ def create_app(test_config=None):
                     SAMPLE_SPACES,
                 )
 
+            if deployment == "staging":
+                db.execute(
+                    """INSERT INTO study_spaces(id,name,location,description,study_type,outlets,atmosphere)
+                       VALUES (999,'Staging smoke test','Test fixture','Used for deployment checks.',
+                               'both',0,'quiet') ON CONFLICT(id) DO NOTHING"""
+                )
+
+    @app.before_request
+    def assign_request_id():
+        g.request_id = secrets.token_hex(16)
+
     @app.after_request
     def set_browser_security_headers(response):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
         )
+        response.headers["X-Request-ID"] = g.request_id
+        if json_logs and (request.endpoint != "health" or response.status_code != 200):
+            print(json.dumps({
+                "event": "http_request",
+                "level": logging.getLevelName(logging.ERROR if response.status_code >= 500 else logging.INFO),
+                "request_id": g.request_id,
+                "route": request.url_rule.rule if request.url_rule else None,
+                "status": response.status_code,
+            }), flush=True)
         return response
 
     @app.context_processor
@@ -143,6 +187,27 @@ def create_app(test_config=None):
         sql, args = build_space_query(filters)
         rows = get_db().execute(sql, args).fetchall()
         return render_template("explore.html", spaces=rows, filters=filters)
+
+    @app.get("/spaces/statuses")
+    def space_statuses():
+        rows = get_db().execute("""
+            SELECT report.space_id, report.crowd, report.noise, report.created_at
+            FROM study_spaces AS space
+            JOIN status_reports AS report ON report.id = (
+                SELECT id FROM status_reports WHERE space_id = space.id
+                ORDER BY created_at DESC, id DESC LIMIT 1
+            )
+        """).fetchall()
+        now = utc_now()
+        statuses = {}
+        for row in rows:
+            report = report_view(row, now)
+            if report is not None:
+                statuses[row["space_id"]] = {
+                    "crowd": report["crowd_label"], "noise": report["noise_label"],
+                    "age": report["age"], "stale": report["stale"],
+                }
+        return statuses, 200, {"Cache-Control": "no-store"}
 
     @app.get("/spaces/<int:space_id>")
     def detail(space_id):
@@ -232,8 +297,13 @@ def create_app(test_config=None):
 
     @app.get("/health")
     def health():
-        get_db().execute("SELECT 1").fetchone()
-        return {"status": "ok", "dataset": dataset}
+        try:
+            get_db().execute("SELECT 1 FROM catalog_identity").fetchone()
+        except sqlite3.Error:
+            return {"status": "unavailable", "database": "unavailable",
+                    "version": app_version, "commit": commit_sha}, 503, {"Cache-Control": "no-store"}
+        return {"status": "ok", "database": "reachable", "dataset": dataset,
+                "version": app_version, "commit": commit_sha}, 200, {"Cache-Control": "no-store"}
 
     return app
 

@@ -8,6 +8,20 @@ catalog links to official library hours and room information, with directions to
 each building. The crowd and noise panel shows observations submitted by
 visitors and starts empty for every space.
 
+## Start with Docker Compose
+
+From a checkout of this branch:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Open http://127.0.0.1:5000. On PowerShell use
+`Copy-Item .env.example .env` for the first command. SQLite runs inside the app
+and keeps your reports in the Compose volume. `docker compose down` stops the
+app and retains that volume.
+
 ## Start on Windows
 
 1. Install Python 3.10 or newer if it is not already installed.
@@ -42,8 +56,9 @@ python3 -m venv .venv
 - Filter individual/group use and designated quiet spaces. Filters combine.
 - Read location details.
 - Submit an anonymous crowd/noise observation and save it to SQLite.
-- View the latest observation, its UTC timestamp, and up to five recent reports.
-- Refresh the space-detail observation panel automatically every five seconds in an active tab.
+- View the latest observation, its Nashville timestamp (CST or CDT), and up to five recent reports.
+- Refresh the latest crowd and noise report on each search card and on the space-detail page every five seconds in a visible tab.
+- Mark cards with no reports as unknown and reports at least 60 minutes old as potentially outdated.
 - See a warning for reports at least 60 minutes old, or a connection notice when updates cannot load.
 - Limit anonymous repeat reports from the same direct network address for the same space for 60 seconds.
   The stored limiter key is a short-lived HMAC, and the check and report write share a SQLite transaction.
@@ -99,7 +114,7 @@ Unit and integration cases have separate markers. `domain.py` contains pure sear
 
 GitHub Actions checks PRs targeting main and pushes to main. After a successful push to main, a separate delivery job builds and publishes `StudySpot-<commit SHA>.zip` as a versioned runnable Actions artifact. The ZIP contains the application, templates, static assets, schema and pinned runtime dependencies, with no databases or session keys.
 
-To run a downloaded artifact, extract it, install `requirements-runtime-lock.txt`, and run `python app.py`. It needs Python 3.12 for the pinned Sprint 3 build. There is no automatic public deployment.
+To run a downloaded artifact, extract it, install `requirements-runtime-lock.txt`, and run `python app.py`. It needs Python 3.12 for the pinned Sprint 3 build. The ZIP is separate from the container release pipeline.
 
 The Sprint 4 candidate adds parallel Bandit, pip-audit and gitleaks checks. See
 [the local security audit](docs/security/sprint4-audit.md) and
@@ -110,3 +125,22 @@ The Sprint 4 candidate adds parallel Bandit, pip-audit and gitleaks checks. See
 The hosted pilot uses the same catalog and study-space UI with a shared D1
 database. See [hosting/README.md](hosting/README.md) for deployment architecture
 and isolated verification commands. The web and local databases are separate.
+
+## Sprint 5 release
+
+The container staging and production URLs will be added here after provisioning.
+The public candidate flow uses no StudySpot account. Staging has a separate
+smoke-test credential stored in GitHub Environments. See
+[deployment architecture](docs/ops/DEPLOYMENT.md),
+[hosting decision](docs/adr/0001-sprint5-hosting.md) and
+[runbook](docs/ops/RUNBOOK.md).
+
+## Quick guide and future work
+
+Search for a library, optionally filter for quiet spaces, and open a result.
+Choose Official hours or Directions before visiting. If you are at the space,
+choose its current crowd and noise levels and save the observation. The latest
+reported status refreshes on the space and search pages.
+
+Future work includes account-aware reporting, moderation and verifying outlet
+availability per campus space. See the [release plan](docs/SPRINT5_PLAN.md).

@@ -18,7 +18,7 @@ def build() -> None:
     catalog = json.loads((ROOT / "campus-spaces.json").read_text(encoding="utf-8"))
     assets = {
         name: (ROOT / "static" / name).read_text(encoding="utf-8")
-        for name in ("style.css", "live-observations.js")
+        for name in ("style.css", "live-observations.js", "space-statuses.js")
     }
     assets["campus-search.js"] = (ROOT / "hosting" / "campus-search.js").read_text(encoding="utf-8")
     pages = {}
@@ -44,7 +44,8 @@ def build() -> None:
     output = ROOT / "dist"
     server = output / "server"
     server.mkdir(exist_ok=True, parents=True)
-    data = {"pages": pages, "assets": assets, "crowd": CROWD, "noise": NOISE}
+    data = {"pages": pages, "assets": assets, "crowd": CROWD, "noise": NOISE,
+            "spaceIds": [entry["id"] for entry in catalog]}
     worker = (ROOT / "hosting" / "worker.js").read_text(encoding="utf-8")
     (server / "index.js").write_text(
         f"const data = {json.dumps(data, ensure_ascii=True)};\n{worker}", encoding="utf-8",

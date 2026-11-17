@@ -44,6 +44,25 @@ function age(timestamp, now) {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
+async function spaceStatuses(env) {
+  const now = Date.now();
+  const placeholders = data.spaceIds.map(() => "(?)").join(", ");
+  const { results } = await env.DB.prepare(`
+    WITH spaces(id) AS (VALUES ${placeholders})
+    SELECT report.space_id, report.crowd, report.noise, report.created_at
+    FROM spaces JOIN observations AS report ON report.id = (
+      SELECT id FROM observations WHERE space_id = spaces.id AND created_at >= ?
+      ORDER BY created_at DESC, id DESC LIMIT 1
+    )
+  `).bind(...data.spaceIds, now - historyRetention).all();
+  return json(Object.fromEntries(results.map((row) => [row.space_id, {
+    crowd: data.crowd[row.crowd],
+    noise: data.noise[row.noise],
+    age: age(row.created_at, now),
+    stale: now - row.created_at >= 60 * minute,
+  }])));
+}
+
 function observationPanel(rows, now) {
   const title = '<div id="observations"><section id="latest" class="latest" aria-labelledby="latest-title"><h2 id="latest-title">Latest crowd and noise report</h2>';
   if (!rows.length) {
@@ -140,6 +159,7 @@ export default {
         return json({ status: "ok", dataset: "campus" });
       }
       if (route === "/" && request.method === "GET") return html(data.pages["/"]);
+      if (route === "/spaces/statuses" && request.method === "GET") return await spaceStatuses(env);
       if (route.startsWith("/static/") && request.method === "GET") {
         const name = route.slice("/static/".length);
         if (!Object.hasOwn(data.assets, name)) return new Response(null, { status: 404, headers });

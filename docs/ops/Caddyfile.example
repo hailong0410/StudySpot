@@ -1,0 +1,10 @@
+staging.example.invalid {
+    basic_auth {
+        studyspot-smoke REPLACE_WITH_CADDY_PASSWORD_HASH
+    }
+    reverse_proxy 127.0.0.1:15000
+}
+
+studyspot.example.invalid {
+    reverse_proxy 127.0.0.1:25000
+}

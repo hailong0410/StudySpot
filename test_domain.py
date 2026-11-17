@@ -67,9 +67,20 @@ def test_report_age_and_stale_boundaries(seconds, age, stale):
     assert result['age'] == age
     assert result['stale'] is stale
     assert result['crowd_label'] == 'Not busy' and result['noise_label'] == 'Quiet'
-    assert result['display_time'] == posted.strftime('%Y-%m-%d %H:%M UTC')
     assert result['id'] == 1
     assert row == {'id':1,'crowd':'low','noise':'quiet','created_at':posted.isoformat()}
+
+
+@pytest.mark.parametrize(('created_at', 'display_time'), [
+    ('2026-11-12T02:50:00+00:00', '2026-11-11 20:50 CST'),
+    ('2026-07-12T02:50:00+00:00', '2026-07-11 21:50 CDT'),
+])
+def test_report_time_uses_nashville_date_and_seasonal_offset(created_at, display_time):
+    row = {'crowd': 'low', 'noise': 'quiet', 'created_at': created_at}
+    result = report_view(row, datetime.fromisoformat(created_at))
+    assert result is not None
+    assert result['display_time'] == display_time
+    assert result['created_at'] == created_at
 
 
 @pytest.mark.parametrize('row', [None, {}])
